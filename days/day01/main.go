@@ -22,26 +22,21 @@ func readCSV(filename string) ([][]string, error) {
 	return readCSVFromReader(file)
 }
 
-// convertToColumns transforms rows of strings into columns of int32
-func convertToColumns(records [][]string) [][]int32 {
+// convertToInt32Matrix converts a matrix of strings to a matrix of int32 values
+func convertToInt32Matrix(records [][]string) [][]int32 {
 	if len(records) == 0 {
 		return nil
 	}
 
-	numCols := len(records[0])
-	cols := make([][]int32, numCols)
-
-	for i := 0; i < numCols; i++ {
-		cols[i] = make([]int32, len(records))
-	}
-
+	result := make([][]int32, len(records))
 	for i, row := range records {
+		result[i] = make([]int32, len(row))
 		for j, val := range row {
 			num, _ := strconv.ParseInt(val, 10, 32)
-			cols[j][i] = int32(num)
+			result[i][j] = int32(num)
 		}
 	}
-	return cols
+	return result
 }
 
 func main() {

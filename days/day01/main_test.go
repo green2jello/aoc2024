@@ -110,7 +110,7 @@ func TestReadCSVFromBuffer(testContext *testing.T) {
 	}
 }
 
-func TestConvertToColumns(t *testing.T) {
+func TestConvertToInt32Matrix(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    [][]string
@@ -128,17 +128,26 @@ func TestConvertToColumns(t *testing.T) {
 				{"3", "4"},
 			},
 			expected: [][]int32{
-				{1, 3},
-				{2, 4},
+				{1, 2},
+				{3, 4},
+			},
+		},
+		{
+			name: "single row",
+			input: [][]string{
+				{"10", "20", "30"},
+			},
+			expected: [][]int32{
+				{10, 20, 30},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := convertToColumns(tt.input)
+			result := convertToInt32Matrix(tt.input)
 			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("convertToColumns() = %v, want %v", result, tt.expected)
+				t.Errorf("convertToInt32Matrix() = %v, want %v", result, tt.expected)
 			}
 		})
 	}
