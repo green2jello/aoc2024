@@ -1,40 +1,53 @@
 package main
 
 import (
-	"fmt"
+	"encoding/csv"
+	"io"
 	"os"
-	"bufio"
+	"strconv"
 )
 
-// Empty file setup for GoLang. Will remove in future just putting in structure.
-
-func part1(input []string) int {
-	// TODO: Implement part 1
-	return 0
+func readCSVFromReader(r io.Reader) ([][]string, error) {
+	reader := csv.NewReader(r)
+	return reader.ReadAll()
 }
 
-func part2(input []string) int {
-	// TODO: Implement part 2
-	return 0
-}
-
-func readInput() []string {
-	file, err := os.Open("input.txt")
+func readCSV(filename string) ([][]string, error) {
+	file, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer file.Close()
 
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+	return readCSVFromReader(file)
+}
+
+// convertToColumns transforms rows of strings into columns of int32
+func convertToColumns(records [][]string) [][]int32 {
+	if len(records) == 0 {
+		return nil
 	}
-	return lines
+
+	numCols := len(records[0])
+	cols := make([][]int32, numCols)
+
+	for i := 0; i < numCols; i++ {
+		cols[i] = make([]int32, len(records))
+	}
+
+	for i, row := range records {
+		for j, val := range row {
+			num, _ := strconv.ParseInt(val, 10, 32)
+			cols[j][i] = int32(num)
+		}
+	}
+	return cols
 }
 
 func main() {
-	input := readInput()
-	fmt.Printf("Part 1: %d\n", part1(input))
-	fmt.Printf("Part 2: %d\n", part2(input))
+	records, err := readCSV("days/day01/input.csv")
+	if err != nil {
+		panic(err)
+	}
+	_ = records // TODO: Process the records
 }
