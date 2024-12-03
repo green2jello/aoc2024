@@ -17,7 +17,7 @@ run-day:
 		echo "Please specify a day (e.g., make run-day DAY=01)"; \
 		exit 1; \
 	fi
-	go run ./days/day$(DAY)/main.go
+	go run ./days/day$(DAY)/
 
 # Clean build artifacts
 clean:
