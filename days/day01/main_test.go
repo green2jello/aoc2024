@@ -108,50 +108,44 @@ func TestExtractAndSortColumns(t *testing.T) {
 	}
 }
 
-func TestAbsValDiffCols(t *testing.T) {
+func TestConvertToInt32Matrix(t *testing.T) {
 	tests := []struct {
-		name string
-		col1 []int32
-		col2 []int32
-		want []int32
+		name     string
+		input    [][]string
+		expected [][]int32
 	}{
 		{
-			name: "basic test",
-			col1: []int32{5, 10, 15},
-			col2: []int32{2, 8, 20},
-			want: []int32{3, 2, 5},
+			name:     "empty input",
+			input:    [][]string{},
+			expected: nil,
 		},
 		{
-			name: "negative numbers",
-			col1: []int32{-5, 10, -15},
-			col2: []int32{2, -8, -20},
-			want: []int32{7, 18, 5},
+			name: "simple 2x2",
+			input: [][]string{
+				{"1", "2"},
+				{"3", "4"},
+			},
+			expected: [][]int32{
+				{1, 2},
+				{3, 4},
+			},
 		},
 		{
-			name: "same numbers",
-			col1: []int32{1, 1, 1},
-			col2: []int32{1, 1, 1},
-			want: []int32{0, 0, 0},
-		},
-		{
-			name: "empty slices",
-			col1: []int32{},
-			col2: []int32{},
-			want: []int32{},
-		},
-		{
-			name: "large numbers",
-			col1: []int32{50558, 25393},
-			col2: []int32{44088, 45650},
-			want: []int32{6470, 20257},
+			name: "single row",
+			input: [][]string{
+				{"10", "20", "30"},
+			},
+			expected: [][]int32{
+				{10, 20, 30},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := AbsValDiffCols(tt.col1, tt.col2)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("AbsValDiffCols() = %v, want %v", got, tt.want)
+			result := convertToInt32Matrix(tt.input)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("convertToInt32Matrix() = %v, want %v", result, tt.expected)
 			}
 		})
 	}
