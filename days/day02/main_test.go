@@ -156,3 +156,32 @@ func TestAbsValDiffCols(t *testing.T) {
 		})
 	}
 }
+
+func TestSumCol(t *testing.T) {
+	col := []int32{1, 2, 3, 4, 5}
+	got := sumCol(col)
+	want := int32(15)
+	if got != want {
+		t.Errorf("sumCol() = %v, want %v", got, want)
+	}
+}
+
+func TestNumberAppearances(t *testing.T) {
+	col1 := []int32{1, 2, 3, 4, 5}
+	col2 := []int32{3, 3, 4, 4, 5, 5, 5}
+	got := numberAppearances(col1, col2)
+	want := []int32{0, 0, 2, 2, 3}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("numberAppearances() = %v, want %v", got, want)
+	}
+}
+
+func TestMultiplyTwoCols(t *testing.T) {
+	col1 := []int32{1, 2, 3}
+	col2 := []int32{4, 5, 6}
+	got := multiplyTwoCols(col1, col2)
+	want := []int32{4, 10, 18}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("multiplyTwoCols() = %v, want %v", got, want)
+	}
+}
