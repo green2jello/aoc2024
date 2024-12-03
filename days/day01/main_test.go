@@ -1,153 +1,195 @@
 package main
 
 import (
+	"os"
 	"reflect"
-	"strings"
 	"testing"
 )
 
-// TestReadCSVFromBuffer tests our CSV reading functionality using string inputs instead of actual files.
-// This makes our tests faster and more reliable since they don't depend on external files.
-func TestReadCSVFromBuffer(testContext *testing.T) {
-	// In Go, we can define a slice of structs to create a table of test cases.
-	// Each test case contains:
-	// - name: a descriptive name for the test
-	// - input: the CSV data as a string
-	// - want: what we expect the CSV parser to return
-	// - wantErr: whether we expect this input to cause an error
-	tests := []struct {
-		name    string
-		input   string
-		want    [][]string
-		wantErr bool
-	}{
-		{
-			name: "simple two column csv",
-			// Using backticks (`) allows us to write multi-line strings.
-			// The indentation is just for readability in the code - it gets trimmed later.
-			input: `
-				3,4
-				4,3
-				2,5
-			`,
-			// want is a 2D slice (like a matrix) of strings.
-			// Each inner slice represents one row of the CSV.
-			want: [][]string{
-				{"3", "4"}, // First row
-				{"4", "3"}, // Second row
-				{"2", "5"}, // Third row
-			},
-			wantErr: false, // We expect this input to parse successfully
-		},
-		{
-			name:    "empty input",
-			input:   "",           // Testing with empty input
-			want:    [][]string{}, // Expect an empty slice of slices
-			wantErr: false,
-		},
-		{
-			name: "malformed csv",
-			input: `
-				3,4
-				4,3,5    // This line has 3 columns instead of 2
-				2,5
-			`,
-			// We don't need to specify 'want' here since we expect an error
-			wantErr: true, // We expect this input to cause an error due to inconsistent columns
-		},
+func TestReadCSV(t *testing.T) {
+	// Create a temporary test file
+	testData := "1,2\n3,4\n5,6"
+	tmpfile, err := os.CreateTemp("", "test.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(testData)); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
 	}
 
-	// Run each test case in the table
-	for _, testCase := range tests {
-		// t.Run creates a sub-test with the given name
-		testContext.Run(testCase.name, func(testContext *testing.T) {
-			// STEP 1: Clean up the input
-			// The CSV input above is indented for readability, but we need to remove that indentation
-			// and any extra whitespace before testing.
-			lines := strings.Split(testCase.input, "\n") // Split input into lines
-			for i := range lines {
-				lines[i] = strings.TrimSpace(lines[i]) // Remove whitespace from each line
-			}
-			cleanInput := strings.Join(lines, "\n") // Rejoin lines into a single string
+	// Test the readCSV function
+	got, err := readCSV(tmpfile.Name())
+	if err != nil {
+		t.Errorf("readCSV() error = %v", err)
+		return
+	}
 
-			// STEP 2: Create a string reader
-			// strings.NewReader turns our string into something that can be read like a file
-			reader := strings.NewReader(cleanInput)
+	want := [][]string{
+		{"1", "2"},
+		{"3", "4"},
+		{"5", "6"},
+	}
 
-			// STEP 3: Try to parse the CSV
-			got, err := readCSVFromReader(reader)
-
-			// STEP 4: Check if we got the error status we expected
-			if (err != nil) != testCase.wantErr {
-				testContext.Errorf("readCSVFromReader() error = %v, wantErr %v", err, testCase.wantErr)
-				return
-			}
-
-			// STEP 5: If we didn't expect an error, verify the parsed data
-			if !testCase.wantErr {
-				// Check if we got the right number of rows
-				if len(got) != len(testCase.want) {
-					testContext.Errorf("readCSVFromReader() got %v rows, want %v rows", len(got), len(testCase.want))
-					return
-				}
-
-				// Check each row's content
-				for i := range got {
-					// First check if this row has the right number of columns
-					if len(got[i]) != len(testCase.want[i]) {
-						testContext.Errorf("row %d: got %v columns, want %v columns", i, len(got[i]), len(testCase.want[i]))
-						continue
-					}
-					// Then check each column's content
-					for j := range got[i] {
-						if got[i][j] != testCase.want[i][j] {
-							testContext.Errorf("row %d, col %d: got %v, want %v", i, j, got[i][j], testCase.want[i][j])
-						}
-					}
-				}
-			}
-		})
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("readCSV() = %v, want %v", got, want)
 	}
 }
 
-func TestConvertToInt32Matrix(t *testing.T) {
+func TestExtractAndSortColumns(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    [][]string
-		expected [][]int32
+		wantCol1 []int32
+		wantCol2 []int32
+		wantErr  bool
 	}{
+		{
+			name: "basic test",
+			input: [][]string{
+				{"3", "4"},
+				{"1", "6"},
+				{"2", "5"},
+			},
+			wantCol1: []int32{1, 2, 3},
+			wantCol2: []int32{4, 5, 6},
+			wantErr:  false,
+		},
 		{
 			name:     "empty input",
 			input:    [][]string{},
-			expected: nil,
-		},
-		{
-			name: "simple 2x2",
-			input: [][]string{
-				{"1", "2"},
-				{"3", "4"},
-			},
-			expected: [][]int32{
-				{1, 2},
-				{3, 4},
-			},
+			wantCol1: []int32{},
+			wantCol2: []int32{},
+			wantErr:  false,
 		},
 		{
 			name: "single row",
 			input: [][]string{
-				{"10", "20", "30"},
+				{"42", "24"},
 			},
-			expected: [][]int32{
-				{10, 20, 30},
+			wantCol1: []int32{42},
+			wantCol2: []int32{24},
+			wantErr:  false,
+		},
+		{
+			name: "unsorted numbers",
+			input: [][]string{
+				{"99", "10"},
+				{"1", "55"},
+				{"33", "22"},
 			},
+			wantCol1: []int32{1, 33, 99},
+			wantCol2: []int32{10, 22, 55},
+			wantErr:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := convertToInt32Matrix(tt.input)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("convertToInt32Matrix() = %v, want %v", result, tt.expected)
+			col1, col2, err := extractAndSortColumns(tt.input)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractAndSortColumns() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(col1, tt.wantCol1) {
+				t.Errorf("extractAndSortColumns() col1 = %v, want %v", col1, tt.wantCol1)
+			}
+
+			if !reflect.DeepEqual(col2, tt.wantCol2) {
+				t.Errorf("extractAndSortColumns() col2 = %v, want %v", col2, tt.wantCol2)
+			}
+		})
+	}
+}
+
+func TestAbsValDiffCols(t *testing.T) {
+	tests := []struct {
+		name string
+		col1 []int32
+		col2 []int32
+		want []int32
+	}{
+		{
+			name: "basic test",
+			col1: []int32{5, 10, 15},
+			col2: []int32{2, 8, 20},
+			want: []int32{3, 2, 5},
+		},
+		{
+			name: "negative numbers",
+			col1: []int32{-5, 10, -15},
+			col2: []int32{2, -8, -20},
+			want: []int32{7, 18, 5},
+		},
+		{
+			name: "same numbers",
+			col1: []int32{1, 1, 1},
+			col2: []int32{1, 1, 1},
+			want: []int32{0, 0, 0},
+		},
+		{
+			name: "empty slices",
+			col1: []int32{},
+			col2: []int32{},
+			want: []int32{},
+		},
+		{
+			name: "large numbers",
+			col1: []int32{50558, 25393},
+			col2: []int32{44088, 45650},
+			want: []int32{6470, 20257},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := AbsValDiffCols(tt.col1, tt.col2)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AbsValDiffCols() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSumCol(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []int32
+		expected int32
+	}{
+		{
+			name:     "empty slice",
+			input:    []int32{},
+			expected: 0,
+		},
+		{
+			name:     "single element",
+			input:    []int32{5},
+			expected: 5,
+		},
+		{
+			name:     "multiple elements",
+			input:    []int32{1, 2, 3, 4, 5},
+			expected: 15,
+		},
+		{
+			name:     "negative numbers",
+			input:    []int32{-1, -2, 3, -4, 5},
+			expected: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := sumCol(tt.input)
+			if result != tt.expected {
+				t.Errorf("sumCol(%v) = %v, want %v", tt.input, result, tt.expected)
 			}
 		})
 	}
