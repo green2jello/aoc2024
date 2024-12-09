@@ -8,27 +8,23 @@ import (
 )
 
 const debugt1 = false
-const debugt2 = true
+const debugt2 = false
 
 const checkstring = "XMAS"
 const checkstring2 = "MAS"
 
 func main() {
-	filename := "days/day04/test2_input.txt"
+	// filename := "days/day04/test2_input.txt"
 	// filename := "days/day04/input.txt"
-	// filename := "days/day04/input.txt"
+	filename := "days/day04/input.txt"
 	data := readFileIntoRune(filename)
 	fmt.Println(data[0])
 
 	matches := iterateOverEachChar(data)
-	if debugt1 {
-		fmt.Printf("Part 1 Answer: %d\n", matches)
-	}
+	fmt.Printf("Part 1 Answer: %d\n", matches)
 
 	matches2 := iterateOverEachChar2(data)
-	if debugt2 {
-		fmt.Printf("Part 2 Answer: %d\n", matches2)
-	}
+	fmt.Printf("Part 2 Answer: %d\n", matches2)
 }
 
 func readFileIntoRune(path string) [][]rune {
@@ -75,78 +71,32 @@ func iterateOverEachChar(input [][]rune) int {
 	return matches
 }
 
-func iterateOverEachChar2(input [][]rune) int {
-	matches := 0
-	for rindex, row := range input {
-		for cindex, char := range row {
-			if debugt2 {
-				fmt.Printf("%d %d %s\n", rindex, cindex, string(char))
-			}
-			if char == rune(checkstring2[1]) {
-				// Check if on the edge of the matrix, if so continue, else create sub matrix
-				if rindex == 0 || rindex == len(input)-1 || cindex == 0 || cindex == len(row)-1 {
-					continue
-				}
-				sub := createSubMatrix(input, rindex, cindex)
-				if debugt2 {
-					fmt.Printf("Sub: %v\n", sub)
-				}
-				matches += iterateOverSubMatrices(sub)
-			}
-		}
+// Create a rune mask that is a 3x3 matrix and looks like
+// M . M
+// . A .
+// S . S
+var (
+	mask1 = [][]rune{
+		{'M', '.', 'M'},
+		{'.', 'A', '.'},
+		{'S', '.', 'S'},
 	}
-	return matches
-}
-
-func iterateOverSubMatrices(input [][]rune) int {
-	// Only check the edges of the submatrices
-	// Pretty print the submatrices
-	if debugt2 {
-		fmt.Println(prettyPrintRuneGrid(input))
+	mask2 = [][]rune{
+		{'S', '.', 'S'},
+		{'.', 'A', '.'},
+		{'M', '.', 'M'},
 	}
-	sub_matches := 0
-	// Check if 00 is M and 02 is S or 20 is S
-	// Diagonal down right
-	// For each corner of the submatrix, check if the character is M
-	for rindex, row := range input {
-		for cindex, char := range row {
-			if rindex != 1 && cindex != 1 {
-				if char == rune(checkstring2[0]) {
-					sub_matches += checkNextChars(input, rindex, cindex, 0, 1, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, 1, 0, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, -1, 0, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, 0, -1, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, 1, 1, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, -1, 1, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, 1, -1, checkstring2[1:])
-					sub_matches += checkNextChars(input, rindex, cindex, -1, -1, checkstring2[1:])
-				}
-			} else {
-				continue
-			}
-		}
+	mask3 = [][]rune{
+		{'M', '.', 'S'},
+		{'.', 'A', '.'},
+		{'M', '.', 'S'},
 	}
-	sub_matches += checkNextChars(input, 0, 0, 1, 1, checkstring2)
-	sub_matches += checkNextChars(input, 0, 2, -1, 1, checkstring2)
-	sub_matches += checkNextChars(input, 2, 0, 1, -1, checkstring2)
-	if sub_matches > 0 {
-		return 1
+	mask4 = [][]rune{
+		{'S', '.', 'M'},
+		{'.', 'A', '.'},
+		{'S', '.', 'M'},
 	}
-	sub_matches = 0
-	sub_matches += checkNextChars(input, 0, 2, -1, -1, checkstring2)
-	sub_matches += checkNextChars(input, 2, 2, -1, 1, checkstring2)
-	if sub_matches > 0 {
-		return 1
-	}
-
-	sub_matches = 0
-	sub_matches += checkNextChars(input, 2, 2, 1, -1, checkstring[1:])
-	sub_matches += checkNextChars(input, 2, 0, -1, -1, checkstring[1:])
-	if sub_matches > 0 {
-		return 1
-	}
-	return sub_matches
-}
+)
 
 func createSubMatrix(input [][]rune, rindex int, cindex int) [][]rune {
 	sub := make([][]rune, 3)
@@ -199,11 +149,71 @@ func checkNextChars(input [][]rune, rindex int, cindex int, xdir int, ydir int, 
 	return 0
 }
 
-func prettyPrintRuneGrid(grid [][]rune) string {
-	var sb strings.Builder
-	for _, row := range grid {
-		sb.WriteString(string(row))
-		sb.WriteString("\n")
+func iterateOverEachChar2(input [][]rune) int {
+	matches := 0
+	masks := [][][]rune{mask1, mask2, mask3, mask4}
+
+	for rindex, row := range input {
+		for cindex, char := range row {
+			if debugt2 {
+				fmt.Printf("%d %d %s\n", rindex, cindex, string(char))
+			}
+			if char == rune(checkstring2[1]) {
+				// Check if on the edge of the matrix, if so continue
+				if rindex == 0 || rindex == len(input)-1 || cindex == 0 || cindex == len(row)-1 {
+					continue
+				}
+
+				// Create a sub-matrix around the current character
+				sub := createSubMatrix(input, rindex, cindex)
+
+				// Try all mask orientations
+				for _, mask := range masks {
+					subMatches := applyRuneMask(sub, mask)
+
+					if subMatches > 0 {
+						matches++
+						break // Stop checking other masks once a match is found
+					}
+				}
+			}
+		}
 	}
-	return sb.String()
+	return matches
+}
+
+// func prettyPrintRuneGrid(grid [][]rune) string {
+// 	var sb strings.Builder
+// 	for _, row := range grid {
+// 		sb.WriteString(string(row))
+// 		sb.WriteString("\n")
+// 	}
+// 	return sb.String()
+// }
+
+func applyRuneMask(matrix [][]rune, mask [][]rune) int {
+	matches := 0
+	// Ensure the matrix and mask have the same dimensions
+	if len(matrix) != len(mask) || len(matrix[0]) != len(mask[0]) {
+		return 0
+	}
+
+	for r := 0; r < len(matrix); r++ {
+		for c := 0; c < len(matrix[0]); c++ {
+			// Skip the center of the mask (which is typically used as a reference point)
+			if r == len(matrix)/2 && c == len(matrix[0])/2 {
+				continue
+			}
+
+			// If mask has a non-dot rune, check for match
+			if mask[r][c] != '.' {
+				// Ensure the mask character matches the matrix character
+				if mask[r][c] != matrix[r][c] {
+					return 0 // If any non-dot mask character doesn't match, return 0
+				}
+				matches++
+			}
+		}
+	}
+	return matches
 }
